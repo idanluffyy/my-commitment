@@ -30,7 +30,7 @@
 
             <section class="summary">
 
-                <div class="card clickable" id="incomeCard" role="button" tabindex="0">
+                <div class="card">
                     <span>Monthly Income</span>
                     <strong id="incomeValue">RM 0.00</strong>
                 </div>
@@ -43,6 +43,7 @@
                 <div class="card">
                     <span>This Month Saving</span>
                     <strong id="monthSavingValue">RM 0.00</strong>
+                    <span id="overspendBadge" class="overspend-badge" hidden>⚠️ Overspending</span>
                 </div>
 
                 <div class="card">
@@ -50,9 +51,26 @@
                     <strong id="savingBalanceValue">RM 0.00</strong>
                 </div>
 
+                <div class="card">
+                    <span>Available Balance</span>
+                    <strong id="availableBalanceValue">RM 0.00</strong>
+                </div>
+
             </section>
 
-            <section class="commitments">
+            <section class="list-section">
+
+                <div class="section-title">
+                    <h2>Income Sources</h2>
+                    <button id="addIncomeBtn">+ Add</button>
+                </div>
+
+                <div id="incomeList"></div>
+                <p id="incomeEmptyState" class="empty-state" hidden>No income sources yet. Tap <strong>+ Add</strong> to add your job, part-time work, or any other income.</p>
+
+            </section>
+
+            <section class="list-section">
 
                 <div class="section-title">
                     <h2>Commitments</h2>
@@ -61,6 +79,7 @@
 
                 <div id="commitmentList"></div>
                 <p id="emptyState" class="empty-state" hidden>No commitments yet for this month. Tap <strong>+ Add</strong> to get started.</p>
+                <div id="categoryBreakdown" class="category-breakdown" hidden></div>
 
             </section>
 
@@ -111,7 +130,7 @@
                 <button id="resetBtn" class="settings-btn danger">Reset All Data</button>
             </div>
 
-            <p class="app-version">My Commitment — v2.0</p>
+            <p class="app-version">My Commitment — v4.0</p>
 
         </section>
 
@@ -124,39 +143,51 @@
 
     </div>
 
-    <!-- Add/Edit Commitment Modal -->
-    <div id="commitmentModal" class="modal-backdrop" hidden>
+    <!-- Add/Edit Modal — shared by Income Sources and Commitments -->
+    <div id="entryModal" class="modal-backdrop" hidden>
         <div class="modal">
-            <h3 id="modalTitle">Add Commitment</h3>
+            <h3 id="entryModalTitle">Add Commitment</h3>
 
-            <label for="commitmentIcon">Icon (emoji)</label>
-            <input type="text" id="commitmentIcon" maxlength="4" placeholder="💳">
+            <label for="entryIcon">Icon (emoji)</label>
+            <input type="text" id="entryIcon" maxlength="4" placeholder="💳">
 
-            <label for="commitmentName">Name</label>
-            <input type="text" id="commitmentName" placeholder="e.g. Rent">
+            <label for="entryName">Name</label>
+            <input type="text" id="entryName" placeholder="e.g. Rent, Part-time job">
 
-            <label for="commitmentAmount">Amount</label>
-            <input type="number" id="commitmentAmount" min="0" step="0.01" placeholder="0.00">
+            <label for="entryAmount">Amount</label>
+            <input type="number" id="entryAmount" min="0" step="0.01" placeholder="0.00">
 
-            <div class="modal-actions">
-                <button id="deleteCommitmentBtn" class="settings-btn danger" hidden>Delete</button>
-                <button id="cancelCommitmentBtn" class="settings-btn">Cancel</button>
-                <button id="saveCommitmentBtn" class="settings-btn primary">Save</button>
+            <div id="commitmentOnlyFields">
+
+                <label for="entryCategory">Category</label>
+                <select id="entryCategory">
+                    <option value="housing">🏠 Housing</option>
+                    <option value="transport">🚗 Transport</option>
+                    <option value="food">🍔 Food</option>
+                    <option value="bills">💡 Bills</option>
+                    <option value="others">📦 Others</option>
+                </select>
+
+                <label for="entryDueDate">Due Date (optional)</label>
+                <input type="date" id="entryDueDate">
+
+                <label for="entryPaidAmount">Paid So Far</label>
+                <input type="number" id="entryPaidAmount" min="0" step="0.01" placeholder="0.00">
+
+                <label for="entryNotes">Notes (optional)</label>
+                <input type="text" id="entryNotes" placeholder="e.g. pay via online banking">
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="entryRecurring" checked>
+                    Recurring — repeats every month
+                </label>
+
             </div>
-        </div>
-    </div>
-
-    <!-- Edit Income Modal -->
-    <div id="incomeModal" class="modal-backdrop" hidden>
-        <div class="modal">
-            <h3>Edit Monthly Income</h3>
-
-            <label for="incomeInput">Income Amount</label>
-            <input type="number" id="incomeInput" min="0" step="0.01">
 
             <div class="modal-actions">
-                <button id="cancelIncomeBtn" class="settings-btn">Cancel</button>
-                <button id="saveIncomeBtn" class="settings-btn primary">Save</button>
+                <button id="deleteEntryBtn" class="settings-btn danger" hidden>Delete</button>
+                <button id="cancelEntryBtn" class="settings-btn">Cancel</button>
+                <button id="saveEntryBtn" class="settings-btn primary">Save</button>
             </div>
         </div>
     </div>

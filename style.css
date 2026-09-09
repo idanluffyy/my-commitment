@@ -4,6 +4,10 @@
     padding: 0;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 body {
     font-family: Arial, sans-serif;
     background: #f5f5f7;
@@ -81,6 +85,16 @@ header p {
     color: #d9363e;
 }
 
+.overspend-badge {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #d9363e;
+    background: #fdecea;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
 .balance-card {
     text-align: center;
     padding: 24px;
@@ -99,7 +113,7 @@ header p {
     font-size: 16px;
 }
 
-.commitments {
+.list-section {
     margin-top: 25px;
 }
 
@@ -163,6 +177,116 @@ header p {
 
 .delete-btn:hover {
     color: #d9363e;
+}
+
+.commitment-item {
+    align-items: flex-start;
+    flex-direction: row;
+}
+
+.item-main {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.item-top span {
+    cursor: inherit;
+    flex: 1;
+}
+
+.item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #f0f0f0;
+    color: #555;
+    white-space: nowrap;
+}
+
+.status-tag.status-paid {
+    background: #e6f4ea;
+    color: #1a7f37;
+}
+
+.status-tag.status-partial {
+    background: #fff4e5;
+    color: #b7791f;
+}
+
+.status-tag.status-unpaid {
+    background: #f0f0f0;
+    color: #777;
+}
+
+.due-tag.overdue {
+    background: #fdecea;
+    color: #d9363e;
+}
+
+.carried-tag {
+    background: #eef1ff;
+    color: #4453c9;
+}
+
+.item-progress {
+    font-size: 12px;
+    color: #888;
+}
+
+.item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mark-paid-btn {
+    border: none;
+    background: #e6f4ea;
+    color: #1a7f37;
+    font-size: 14px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.category-breakdown {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 17px;
+    margin-top: 8px;
+}
+
+.breakdown-title {
+    font-size: 13px;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 4px 0;
 }
 
 .month-item {
@@ -308,11 +432,26 @@ nav button.active {
     color: #777;
 }
 
-.modal input {
+.modal input,
+.modal select {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 15px;
+    width: 100%;
+    font-family: inherit;
+}
+
+.checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px !important;
+    color: #1c1c1e !important;
+}
+
+.checkbox-label input {
+    width: auto;
 }
 
 .modal-actions {
@@ -320,4 +459,10 @@ nav button.active {
     gap: 8px;
     justify-content: flex-end;
     margin-top: 10px;
+}
+
+.view,
+.item,
+.card {
+    transition: opacity 0.15s ease;
 }
