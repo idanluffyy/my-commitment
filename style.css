@@ -1,0 +1,107 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f7;
+    color: #1c1c1e;
+}
+
+.app {
+    max-width: 480px;
+    margin: auto;
+    padding: 20px;
+    padding-bottom: 90px;
+}
+
+header {
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 28px;
+}
+
+header p {
+    color: #777;
+    margin-top: 5px;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.card {
+    background: white;
+    padding: 16px;
+    border-radius: 16px;
+}
+
+.card span {
+    display: block;
+    font-size: 13px;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.card strong {
+    font-size: 18px;
+}
+
+.commitments {
+    margin-top: 25px;
+}
+
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.section-title h2 {
+    font-size: 20px;
+}
+
+.section-title button {
+    border: none;
+    background: #1c1c1e;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+}
+
+.item {
+    background: white;
+    padding: 17px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+}
+
+nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 5px;
+    border-top: 1px solid #ddd;
+}
+
+nav button {
+    border: none;
+    background: none;
+    font-size: 12px;
+    color: #555;
+}
