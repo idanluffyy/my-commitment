@@ -30,6 +30,26 @@ header p {
     margin-top: 5px;
 }
 
+.month-switcher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.month-nav-btn {
+    border: none;
+    background: none;
+    font-size: 16px;
+    color: #1c1c1e;
+    cursor: pointer;
+    padding: 0 6px;
+    line-height: 1;
+}
+
+.view[hidden] {
+    display: none;
+}
+
 .summary {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -42,6 +62,10 @@ header p {
     border-radius: 16px;
 }
 
+.card.clickable {
+    cursor: pointer;
+}
+
 .card span {
     display: block;
     font-size: 13px;
@@ -51,6 +75,28 @@ header p {
 
 .card strong {
     font-size: 18px;
+}
+
+.card strong.negative {
+    color: #d9363e;
+}
+
+.balance-card {
+    text-align: center;
+    padding: 24px;
+}
+
+.balance-card span {
+    font-size: 14px;
+}
+
+.balance-card strong {
+    font-size: 26px;
+}
+
+.sub-heading {
+    margin: 20px 0 10px;
+    font-size: 16px;
 }
 
 .commitments {
@@ -74,6 +120,7 @@ header p {
     color: white;
     padding: 8px 14px;
     border-radius: 20px;
+    cursor: pointer;
 }
 
 .item {
@@ -82,7 +129,118 @@ header p {
     margin-bottom: 8px;
     border-radius: 14px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 8px;
+}
+
+.item span {
+    cursor: pointer;
+    flex: 1;
+}
+
+.item strong {
+    cursor: pointer;
+}
+
+.item strong.negative {
+    color: #d9363e;
+}
+
+.item strong.positive {
+    color: #1a7f37;
+}
+
+.delete-btn {
+    border: none;
+    background: none;
+    color: #aaa;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    flex-shrink: 0;
+}
+
+.delete-btn:hover {
+    color: #d9363e;
+}
+
+.month-item {
+    cursor: pointer;
+}
+
+.month-item.active-month {
+    border: 2px solid #1c1c1e;
+}
+
+.month-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.month-item-main span {
+    font-size: 12px;
+    color: #777;
+}
+
+.empty-state {
+    text-align: center;
+    color: #888;
+    padding: 30px 10px;
+    font-size: 14px;
+    background: white;
+    border-radius: 14px;
+}
+
+.settings-group {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-group label {
+    font-size: 13px;
+    color: #777;
+}
+
+.settings-group input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+.settings-btn {
+    border: none;
+    background: #f0f0f0;
+    color: #1c1c1e;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.settings-btn.primary {
+    background: #1c1c1e;
+    color: white;
+}
+
+.settings-btn.danger {
+    background: #fdecea;
+    color: #d9363e;
+}
+
+.app-version {
+    text-align: center;
+    color: #aaa;
+    font-size: 12px;
+    margin-top: 10px;
 }
 
 nav {
@@ -104,4 +262,62 @@ nav button {
     background: none;
     font-size: 12px;
     color: #555;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+nav button.active {
+    color: #1c1c1e;
+    font-weight: bold;
+    background: #f0f0f0;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.modal-backdrop[hidden] {
+    display: none;
+}
+
+.modal {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal h3 {
+    margin-bottom: 6px;
+}
+
+.modal label {
+    font-size: 13px;
+    color: #777;
+}
+
+.modal input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 10px;
 }
