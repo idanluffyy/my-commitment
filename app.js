@@ -47,13 +47,16 @@ function migrateData(parsed) {
         if (!Array.isArray(month.incomes)) {
             const legacyIncome = typeof month.income === "number" ? month.income : 0;
             month.incomes = legacyIncome > 0
-                ? [{ id: newId(), icon: "💼", name: "Income", amount: legacyIncome }]
+                ? [{ id: newId(), icon: "💼", name: "Income", amount: legacyIncome, updatedAt: 0 }]
                 : [];
             delete month.income;
         }
         if (!Array.isArray(month.commitments)) {
             month.commitments = [];
         }
+        month.incomes.forEach(i => {
+            if (i.updatedAt === undefined) i.updatedAt = 0;
+        });
         month.commitments.forEach(c => {
             if (c.category === undefined) c.category = "others";
             if (c.type === undefined) c.type = "recurring";
@@ -63,6 +66,7 @@ function migrateData(parsed) {
             if (c.dueDate === undefined) c.dueDate = "";
             if (c.notes === undefined) c.notes = "";
             if (c.carriedNote === undefined) c.carriedNote = "";
+            if (c.updatedAt === undefined) c.updatedAt = 0;
         });
     });
 }
@@ -309,6 +313,7 @@ function markCommitmentPaid(id) {
     const c = month.commitments.find(x => x.id === id);
     if (!c) return;
     c.paidAmount = c.amount;
+    c.updatedAt = Date.now();
     saveData();
     renderHome();
     renderMonthly();
@@ -513,8 +518,9 @@ function saveEntryFromModal() {
         entryItem.icon = icon || defaultIcon;
         entryItem.amount = amount;
         Object.assign(entryItem, extra);
+        entryItem.updatedAt = Date.now();
     } else {
-        list.push({ id: newId(), name, icon: icon || defaultIcon, amount, carriedNote: "", ...extra });
+        list.push({ id: newId(), name, icon: icon || defaultIcon, amount, carriedNote: "", updatedAt: Date.now(), ...extra });
     }
 
     saveData();
@@ -549,7 +555,7 @@ function createNewMonth() {
 
     if (!data.months[nextKey]) {
         const prev = data.months[latestKey];
-        const newIncomes = prev ? prev.incomes.map(i => ({ ...i, id: newId() })) : [];
+        const newIncomes = prev ? prev.incomes.map(i => ({ ...i, id: newId(), updatedAt: Date.now() })) : [];
         const newCommitments = [];
 
         if (prev) {
@@ -568,7 +574,8 @@ function createNewMonth() {
                         dueDate: shiftDueDate(c.dueDate),
                         notes: c.notes,
                         type: c.type,
-                        carriedNote: ""
+                        carriedNote: "",
+                        updatedAt: Date.now()
                     });
                 }
 
@@ -586,7 +593,8 @@ function createNewMonth() {
                         dueDate: "",
                         notes: c.notes,
                         type: "one-time",
-                        carriedNote: `Carried from ${monthLabel(latestKey)}`
+                        carriedNote: `Carried from ${monthLabel(latestKey)}`,
+                        updatedAt: Date.now()
                     });
                 }
             });
@@ -616,6 +624,63 @@ function exportData() {
     URL.revokeObjectURL(url);
 }
 
+// Combines two entry lists (incomes or commitments) from the same month.
+// Same id on both sides -> whichever copy was edited more recently wins.
+// New id, but same name+amount already present -> treated as the same
+// real-world item (e.g. both phones independently added "Rent RM800") and
+// skipped, so merging doesn't pile up duplicates.
+function mergeEntryList(existingList, incomingList) {
+    const result = existingList.map(e => ({ ...e }));
+    const byId = new Map(result.map(e => [e.id, e]));
+
+    incomingList.forEach(inc => {
+        if (byId.has(inc.id)) {
+            const cur = byId.get(inc.id);
+            if ((inc.updatedAt || 0) > (cur.updatedAt || 0)) {
+                Object.assign(cur, inc);
+            }
+            return;
+        }
+
+        const isDuplicate = result.some(e =>
+            e.name.trim().toLowerCase() === inc.name.trim().toLowerCase() &&
+            Math.abs(e.amount - inc.amount) < 0.01
+        );
+        if (isDuplicate) return;
+
+        const copy = { ...inc };
+        result.push(copy);
+        byId.set(copy.id, copy);
+    });
+
+    return result;
+}
+
+function mergeMonths(existingMonths, incomingMonths) {
+    const result = {};
+
+    Object.keys(existingMonths).forEach(k => {
+        result[k] = {
+            incomes: existingMonths[k].incomes.map(e => ({ ...e })),
+            commitments: existingMonths[k].commitments.map(e => ({ ...e }))
+        };
+    });
+
+    Object.keys(incomingMonths).forEach(k => {
+        if (!result[k]) {
+            result[k] = {
+                incomes: incomingMonths[k].incomes.map(e => ({ ...e })),
+                commitments: incomingMonths[k].commitments.map(e => ({ ...e }))
+            };
+        } else {
+            result[k].incomes = mergeEntryList(result[k].incomes, incomingMonths[k].incomes);
+            result[k].commitments = mergeEntryList(result[k].commitments, incomingMonths[k].commitments);
+        }
+    });
+
+    return result;
+}
+
 function importData(file) {
     const reader = new FileReader();
     reader.onload = e => {
@@ -626,11 +691,23 @@ function importData(file) {
             }
             if (!parsed.settings) parsed.settings = { currency: "RM" };
             migrateData(parsed);
-            data = parsed;
+
+            const wantsMerge = confirm(
+                "Merge this backup with the data already on this device?\n\n" +
+                "OK = Merge — combine both, keeping whichever edit is newer, without duplicating matching items.\n" +
+                "Cancel = Replace — wipe this device's data and use only what's in the backup."
+            );
+
+            if (wantsMerge) {
+                data.months = mergeMonths(data.months, parsed.months);
+            } else {
+                data = parsed;
+            }
+
             ensureMonth(activeMonthKey);
             saveData();
             renderAll();
-            alert("Data imported successfully.");
+            alert(wantsMerge ? "Merged successfully." : "Data replaced with the backup.");
         } catch (err) {
             alert("Could not import file: " + err.message);
         }
