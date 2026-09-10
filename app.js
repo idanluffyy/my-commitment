@@ -54,6 +54,9 @@ function migrateData(parsed) {
         if (!Array.isArray(month.commitments)) {
             month.commitments = [];
         }
+        if (!Array.isArray(month.savingsTransactions)) {
+            month.savingsTransactions = [];
+        }
         month.incomes.forEach(i => {
             if (i.updatedAt === undefined) i.updatedAt = 0;
         });
@@ -68,6 +71,10 @@ function migrateData(parsed) {
             if (c.carriedNote === undefined) c.carriedNote = "";
             if (c.updatedAt === undefined) c.updatedAt = 0;
         });
+        month.savingsTransactions.forEach(t => {
+            if (t.updatedAt === undefined) t.updatedAt = 0;
+            if (t.note === undefined) t.note = "";
+        });
     });
 }
 
@@ -77,7 +84,10 @@ function saveData() {
 
 function ensureMonth(key) {
     if (!data.months[key]) {
-        data.months[key] = { incomes: [], commitments: [] };
+        data.months[key] = { incomes: [], commitments: [], savingsTransactions: [] };
+    }
+    if (!data.months[key].savingsTransactions) {
+        data.months[key].savingsTransactions = [];
     }
     return data.months[key];
 }
@@ -166,16 +176,28 @@ function formatMoney(amount) {
     return `${sign}${currency} ${Math.abs(amount).toFixed(2)}`;
 }
 
+function getMonthSavingsAdjustment(key) {
+    const month = data.months[key];
+    if (!month || !month.savingsTransactions) return 0;
+    return month.savingsTransactions.reduce((sum, t) => sum + (t.type === "deposit" ? t.amount : -t.amount), 0);
+}
+
 function getMonthTotals(key) {
-    const month = data.months[key] || { incomes: [], commitments: [] };
+    const month = data.months[key] || { incomes: [], commitments: [], savingsTransactions: [] };
     const totalIncome = month.incomes.reduce((sum, i) => sum + i.amount, 0);
     const totalCommitment = month.commitments.reduce((sum, c) => sum + c.amount, 0);
     const totalPaid = month.commitments.reduce((sum, c) => sum + (c.paidAmount || 0), 0);
+    const saving = totalIncome - totalCommitment;
+    const savingsAdjustment = getMonthSavingsAdjustment(key);
     return {
         totalIncome,
         totalCommitment,
         totalPaid,
-        saving: totalIncome - totalCommitment,
+        saving,
+        savingsAdjustment,
+        // netSaving is what actually moves the Saving Balance: the automatic
+        // leftover (income minus commitments) plus any manual deposits/withdrawals.
+        netSaving: saving + savingsAdjustment,
         availableBalance: totalIncome - totalPaid
     };
 }
@@ -184,11 +206,11 @@ function getCumulativeSavingUpTo(key) {
     return Object.keys(data.months)
         .filter(k => k <= key)
         .sort()
-        .reduce((sum, k) => sum + getMonthTotals(k).saving, 0);
+        .reduce((sum, k) => sum + getMonthTotals(k).netSaving, 0);
 }
 
 function getTotalSavingsBalance() {
-    return Object.keys(data.months).reduce((sum, k) => sum + getMonthTotals(k).saving, 0);
+    return Object.keys(data.months).reduce((sum, k) => sum + getMonthTotals(k).netSaving, 0);
 }
 
 function escapeHtml(str) {
@@ -263,12 +285,20 @@ function renderCommitmentList() {
                 ${status !== "paid" ? `<div class="item-progress">Paid ${formatMoney(c.paidAmount || 0)} of ${formatMoney(c.amount)}</div>` : ""}
             </div>
             <div class="item-actions">
+                ${status !== "paid" ? `<button class="pay-btn" title="Add a payment">💵</button>` : ""}
                 ${status !== "paid" ? `<button class="mark-paid-btn" title="Mark fully paid">✓</button>` : ""}
                 <button class="delete-btn" aria-label="Delete ${escapeHtml(c.name)}">✕</button>
             </div>
         `;
 
         el.querySelector(".item-main").addEventListener("click", () => openEntryModal("commitment", c.id));
+        const payBtn = el.querySelector(".pay-btn");
+        if (payBtn) {
+            payBtn.addEventListener("click", e => {
+                e.stopPropagation();
+                openPaymentModal(c.id);
+            });
+        }
         const markPaidBtn = el.querySelector(".mark-paid-btn");
         if (markPaidBtn) {
             markPaidBtn.addEventListener("click", e => {
@@ -320,6 +350,149 @@ function markCommitmentPaid(id) {
     renderSavings();
 }
 
+/* ---------- pay a commitment (adds to paidAmount, doesn't replace it) ---------- */
+
+let paymentEntryId = null;
+
+function openPaymentModal(id) {
+    paymentEntryId = id;
+    const c = ensureMonth(activeMonthKey).commitments.find(x => x.id === id);
+    if (!c) return;
+
+    const remaining = Math.max(0, c.amount - (c.paidAmount || 0));
+    document.getElementById("paymentModalTitle").textContent = `Pay: ${c.name}`;
+    const input = document.getElementById("paymentAmount");
+    input.value = remaining.toFixed(2);
+
+    document.getElementById("paymentModal").hidden = false;
+    input.focus();
+    input.select();
+}
+
+function closePaymentModal() {
+    document.getElementById("paymentModal").hidden = true;
+    paymentEntryId = null;
+}
+
+function savePaymentFromModal() {
+    const amount = parseFloat(document.getElementById("paymentAmount").value);
+    if (isNaN(amount) || amount <= 0) { alert("Please enter a valid payment amount."); return; }
+
+    const c = ensureMonth(activeMonthKey).commitments.find(x => x.id === paymentEntryId);
+    if (!c) { closePaymentModal(); return; }
+
+    // Adds to what's already been paid (so paying RM100 twice totals RM200),
+    // capped at the full amount owed.
+    c.paidAmount = Math.min(c.amount, (c.paidAmount || 0) + amount);
+    c.updatedAt = Date.now();
+
+    saveData();
+    closePaymentModal();
+    renderHome();
+    renderMonthly();
+    renderSavings();
+}
+
+/* ---------- savings transactions: manual deposits / withdrawals ---------- */
+
+let editingTransaction = { type: "deposit", id: null };
+
+function renderSavingsTransactions() {
+    document.getElementById("transactionsMonthLabel").textContent = monthLabel(activeMonthKey);
+
+    const month = ensureMonth(activeMonthKey);
+    const list = document.getElementById("savingsTransactionList");
+    list.innerHTML = "";
+    document.getElementById("savingsTransactionEmpty").hidden = month.savingsTransactions.length > 0;
+
+    month.savingsTransactions.forEach(t => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+            <span>${t.type === "deposit" ? "➕" : "➖"} ${escapeHtml(t.note || (t.type === "deposit" ? "Deposit" : "Withdrawal"))}</span>
+            <strong class="${t.type === "deposit" ? "positive" : "negative"}">${t.type === "deposit" ? "+" : "-"}${formatMoney(t.amount)}</strong>
+            <button class="delete-btn" aria-label="Delete transaction">✕</button>
+        `;
+        el.querySelector("span").addEventListener("click", () => openTransactionModal(t.type, t.id));
+        el.querySelector("strong").addEventListener("click", () => openTransactionModal(t.type, t.id));
+        el.querySelector(".delete-btn").addEventListener("click", e => {
+            e.stopPropagation();
+            deleteTransaction(t.id);
+        });
+        list.appendChild(el);
+    });
+}
+
+function openTransactionModal(type, id) {
+    editingTransaction = { type, id: id || null };
+    const title = document.getElementById("transactionModalTitle");
+    const amountInput = document.getElementById("transactionAmount");
+    const noteInput = document.getElementById("transactionNote");
+    const deleteBtn = document.getElementById("deleteTransactionBtn");
+
+    if (id) {
+        const t = ensureMonth(activeMonthKey).savingsTransactions.find(x => x.id === id);
+        title.textContent = (t.type === "deposit" ? "Edit Deposit" : "Edit Withdrawal");
+        amountInput.value = t.amount;
+        noteInput.value = t.note || "";
+        deleteBtn.hidden = false;
+    } else {
+        title.textContent = type === "deposit" ? "Add Deposit" : "Add Withdrawal";
+        amountInput.value = "";
+        noteInput.value = "";
+        deleteBtn.hidden = true;
+    }
+
+    document.getElementById("transactionModal").hidden = false;
+    amountInput.focus();
+}
+
+function closeTransactionModal() {
+    document.getElementById("transactionModal").hidden = true;
+    editingTransaction = { type: "deposit", id: null };
+}
+
+function saveTransactionFromModal() {
+    const amount = parseFloat(document.getElementById("transactionAmount").value);
+    const note = document.getElementById("transactionNote").value.trim();
+    if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+    const month = ensureMonth(activeMonthKey);
+    const { type, id } = editingTransaction;
+
+    if (id) {
+        const t = month.savingsTransactions.find(x => x.id === id);
+        t.amount = amount;
+        t.note = note;
+        t.updatedAt = Date.now();
+    } else {
+        month.savingsTransactions.push({
+            id: newId(),
+            type,
+            amount,
+            note,
+            date: todayStr(),
+            updatedAt: Date.now()
+        });
+    }
+
+    saveData();
+    closeTransactionModal();
+    renderHome();
+    renderMonthly();
+    renderSavings();
+}
+
+function deleteTransaction(id) {
+    if (!confirm("Delete this transaction?")) return;
+    const month = ensureMonth(activeMonthKey);
+    month.savingsTransactions = month.savingsTransactions.filter(t => t.id !== id);
+    saveData();
+    renderHome();
+    renderMonthly();
+    renderSavings();
+}
+
 /* ---------- rendering: home / monthly / savings / settings ---------- */
 
 function renderHome() {
@@ -358,7 +531,7 @@ function renderMonthly() {
     }
 
     keys.forEach(key => {
-        const { totalIncome, totalCommitment, saving } = getMonthTotals(key);
+        const { totalIncome, totalCommitment, netSaving } = getMonthTotals(key);
         const row = document.createElement("div");
         row.className = "item month-item" + (key === activeMonthKey ? " active-month" : "");
         row.innerHTML = `
@@ -366,7 +539,7 @@ function renderMonthly() {
                 <strong>${monthLabel(key)}</strong>
                 <span>${formatMoney(totalIncome)} income · ${formatMoney(totalCommitment)} committed</span>
             </div>
-            <strong class="${saving < 0 ? "negative" : ""}">${formatMoney(saving)}</strong>
+            <strong class="${netSaving < 0 ? "negative" : ""}">${formatMoney(netSaving)}</strong>
         `;
         row.addEventListener("click", () => {
             activeMonthKey = key;
@@ -380,6 +553,8 @@ function renderMonthly() {
 function renderSavings() {
     document.getElementById("savingsTotalValue").textContent = formatMoney(getTotalSavingsBalance());
 
+    renderSavingsTransactions();
+
     const log = document.getElementById("savingsLog");
     log.innerHTML = "";
     const keys = Object.keys(data.months).sort().reverse();
@@ -390,12 +565,12 @@ function renderSavings() {
     }
 
     keys.forEach(key => {
-        const { saving } = getMonthTotals(key);
+        const { netSaving } = getMonthTotals(key);
         const row = document.createElement("div");
         row.className = "item";
         row.innerHTML = `
             <span>${monthLabel(key)}</span>
-            <strong class="${saving < 0 ? "negative" : "positive"}">${saving >= 0 ? "+" : ""}${formatMoney(saving)}</strong>
+            <strong class="${netSaving < 0 ? "negative" : "positive"}">${netSaving >= 0 ? "+" : ""}${formatMoney(netSaving)}</strong>
         `;
         log.appendChild(row);
     });
@@ -600,7 +775,9 @@ function createNewMonth() {
             });
         }
 
-        data.months[nextKey] = { incomes: newIncomes, commitments: newCommitments };
+        // Savings transactions are one-off events tied to the month they
+        // happened in, so a new month always starts with none.
+        data.months[nextKey] = { incomes: newIncomes, commitments: newCommitments, savingsTransactions: [] };
         saveData();
     }
 
@@ -656,13 +833,36 @@ function mergeEntryList(existingList, incomingList) {
     return result;
 }
 
+// Like mergeEntryList, but for transactions (which have no "name" to soft-dedupe
+// on) — merges purely by id, newer updatedAt wins on a clash.
+function mergeById(existingList, incomingList) {
+    const result = existingList.map(e => ({ ...e }));
+    const byId = new Map(result.map(e => [e.id, e]));
+
+    incomingList.forEach(inc => {
+        if (byId.has(inc.id)) {
+            const cur = byId.get(inc.id);
+            if ((inc.updatedAt || 0) > (cur.updatedAt || 0)) {
+                Object.assign(cur, inc);
+            }
+            return;
+        }
+        const copy = { ...inc };
+        result.push(copy);
+        byId.set(copy.id, copy);
+    });
+
+    return result;
+}
+
 function mergeMonths(existingMonths, incomingMonths) {
     const result = {};
 
     Object.keys(existingMonths).forEach(k => {
         result[k] = {
             incomes: existingMonths[k].incomes.map(e => ({ ...e })),
-            commitments: existingMonths[k].commitments.map(e => ({ ...e }))
+            commitments: existingMonths[k].commitments.map(e => ({ ...e })),
+            savingsTransactions: (existingMonths[k].savingsTransactions || []).map(e => ({ ...e }))
         };
     });
 
@@ -670,11 +870,13 @@ function mergeMonths(existingMonths, incomingMonths) {
         if (!result[k]) {
             result[k] = {
                 incomes: incomingMonths[k].incomes.map(e => ({ ...e })),
-                commitments: incomingMonths[k].commitments.map(e => ({ ...e }))
+                commitments: incomingMonths[k].commitments.map(e => ({ ...e })),
+                savingsTransactions: (incomingMonths[k].savingsTransactions || []).map(e => ({ ...e }))
             };
         } else {
             result[k].incomes = mergeEntryList(result[k].incomes, incomingMonths[k].incomes);
             result[k].commitments = mergeEntryList(result[k].commitments, incomingMonths[k].commitments);
+            result[k].savingsTransactions = mergeById(result[k].savingsTransactions, incomingMonths[k].savingsTransactions || []);
         }
     });
 
@@ -752,6 +954,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("newMonthBtn").addEventListener("click", createNewMonth);
+
+    document.getElementById("cancelPaymentBtn").addEventListener("click", closePaymentModal);
+    document.getElementById("savePaymentBtn").addEventListener("click", savePaymentFromModal);
+
+    document.getElementById("addDepositBtn").addEventListener("click", () => openTransactionModal("deposit", null));
+    document.getElementById("addWithdrawBtn").addEventListener("click", () => openTransactionModal("withdraw", null));
+    document.getElementById("cancelTransactionBtn").addEventListener("click", closeTransactionModal);
+    document.getElementById("saveTransactionBtn").addEventListener("click", saveTransactionFromModal);
+    document.getElementById("deleteTransactionBtn").addEventListener("click", () => {
+        if (editingTransaction.id) deleteTransaction(editingTransaction.id);
+        closeTransactionModal();
+    });
 
     document.getElementById("currencyInput").addEventListener("change", e => {
         data.settings.currency = e.target.value.trim() || "RM";

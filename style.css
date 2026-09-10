@@ -269,6 +269,27 @@ header p {
     cursor: pointer;
 }
 
+.pay-btn {
+    border: none;
+    background: #eef1ff;
+    color: #4453c9;
+    font-size: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.transaction-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.transaction-actions button {
+    flex: 1;
+}
+
 .category-breakdown {
     background: white;
     border-radius: 14px;
