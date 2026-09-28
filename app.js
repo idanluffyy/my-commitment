@@ -1613,12 +1613,16 @@ function exportData() {
     URL.revokeObjectURL(url);
 }
 
-// Combines two entry lists (incomes or commitments) from the same month.
-// Same id on both sides -> whichever copy was edited more recently wins.
-// New id, but same name+amount already present -> treated as the same
-// real-world item (e.g. both phones independently added "Rent RM800") and
-// skipped, so merging doesn't pile up duplicates.
-function mergeEntryList(existingList, incomingList) {
+// Shared merge engine for two-way syncing between two phones/profiles via
+// Export -> send file -> Import -> Merge. Same id on both sides -> whichever
+// copy was edited more recently wins. New id, but isDuplicateFn says it's
+// the same real-world thing (e.g. both of you independently added "Rent
+// RM800", or both added a "CIMB" account) -> skipped, so merging back and
+// forth between two phones doesn't pile up duplicates over time.
+// isDuplicateFn is omitted for pure append-only logs (transactions, payment
+// history) where two separately-recorded events can legitimately look
+// identical and must NOT be collapsed into one.
+function mergeList(existingList, incomingList, isDuplicateFn) {
     const result = existingList.map(e => ({ ...e }));
     const byId = new Map(result.map(e => [e.id, e]));
 
@@ -1631,11 +1635,7 @@ function mergeEntryList(existingList, incomingList) {
             return;
         }
 
-        const isDuplicate = result.some(e =>
-            e.name.trim().toLowerCase() === inc.name.trim().toLowerCase() &&
-            Math.abs(e.amount - inc.amount) < 0.01
-        );
-        if (isDuplicate) return;
+        if (isDuplicateFn && result.some(e => isDuplicateFn(e, inc))) return;
 
         const copy = { ...inc };
         result.push(copy);
@@ -1645,26 +1645,37 @@ function mergeEntryList(existingList, incomingList) {
     return result;
 }
 
-// Like mergeEntryList, but for transactions/log rows (which have no "name" to
-// soft-dedupe on) — merges purely by id, newer updatedAt wins on a clash.
+function sameName(a, b) {
+    return a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+}
+
+function mergeEntryList(existingList, incomingList) {
+    return mergeList(existingList, incomingList,
+        (e, inc) => sameName(e, inc) && Math.abs(e.amount - inc.amount) < 0.01);
+}
+
+// Pure append-only logs: no name-based dedupe, id + updatedAt only.
 function mergeById(existingList, incomingList) {
-    const result = existingList.map(e => ({ ...e }));
-    const byId = new Map(result.map(e => [e.id, e]));
+    return mergeList(existingList, incomingList, null);
+}
 
-    incomingList.forEach(inc => {
-        if (byId.has(inc.id)) {
-            const cur = byId.get(inc.id);
-            if ((inc.updatedAt || 0) > (cur.updatedAt || 0)) {
-                Object.assign(cur, inc);
-            }
-            return;
-        }
-        const copy = { ...inc };
-        result.push(copy);
-        byId.set(copy.id, copy);
-    });
+// Accounts, goals and items are "current state" (like incomes/commitments),
+// not logs — so they also get name-based dedupe, using whichever field
+// besides name distinguishes two genuinely different things of the same
+// name (an account's type, an item's kind). Balances/amounts are allowed to
+// differ between the two copies being merged (that's expected — the
+// updatedAt-wins id match above is what reconciles those), so amount is
+// deliberately NOT part of the duplicate check here.
+function mergeAccounts(existingList, incomingList) {
+    return mergeList(existingList, incomingList, (e, inc) => sameName(e, inc) && e.type === inc.type);
+}
 
-    return result;
+function mergeGoals(existingList, incomingList) {
+    return mergeList(existingList, incomingList, sameName);
+}
+
+function mergeItems(existingList, incomingList) {
+    return mergeList(existingList, incomingList, (e, inc) => sameName(e, inc) && e.kind === inc.kind);
 }
 
 function mergeMonths(existingMonths, incomingMonths) {
@@ -1721,10 +1732,10 @@ function importData(file) {
 
             if (wantsMerge) {
                 data.months = mergeMonths(data.months, parsed.months);
-                data.accounts = mergeById(data.accounts, parsed.accounts);
+                data.accounts = mergeAccounts(data.accounts, parsed.accounts);
                 data.accountTransactions = mergeById(data.accountTransactions, parsed.accountTransactions);
-                data.goals = mergeById(data.goals, parsed.goals);
-                data.items = mergeById(data.items, parsed.items);
+                data.goals = mergeGoals(data.goals, parsed.goals);
+                data.items = mergeItems(data.items, parsed.items);
             } else {
                 data = parsed;
             }
