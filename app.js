@@ -889,6 +889,24 @@ function getDayTotals(key, day) {
     return { income, expense };
 }
 
+// Everything tied to one specific day, for the tap-a-day detail popup: which
+// income landed, which payments were actually made, and which commitments
+// are due (whether paid yet or not) — three different questions the daily
+// +/- total on its own can't answer.
+function getDayDetail(key, day) {
+    const month = ensureMonth(key);
+    const dateStr = `${key}-${pad2(day)}`;
+    const incomes = month.incomes.filter(i => (i.receivedDate || 1) === day);
+    const payments = month.paymentLog.filter(p => Number(p.date.slice(8, 10)) === day);
+    const due = month.commitments.filter(c => c.dueDate === dateStr);
+    return { incomes, payments, due };
+}
+
+function hasDueUnpaidOn(key, day) {
+    const dateStr = `${key}-${pad2(day)}`;
+    return ensureMonth(key).commitments.some(c => c.dueDate === dateStr && getCommitmentStatus(c) !== "paid");
+}
+
 function renderCalendar() {
     const grid = document.getElementById("calendarGrid");
     grid.innerHTML = "";
@@ -910,6 +928,7 @@ function renderCalendar() {
     for (let day = 1; day <= totalDays; day++) {
         const { income, expense } = getDayTotals(activeMonthKey, day);
         const net = income - expense;
+        const dueUnpaid = hasDueUnpaidOn(activeMonthKey, day);
         const cell = document.createElement("div");
         cell.className = "calendar-cell";
         if (isCurrentRealMonth && day === todayDate) cell.classList.add("calendar-today");
@@ -920,9 +939,51 @@ function renderCalendar() {
             <span class="calendar-day-num">${day}</span>
             ${income > 0 ? `<span class="calendar-amt calendar-amt-pos">+${formatCompact(income)}</span>` : ""}
             ${expense > 0 ? `<span class="calendar-amt calendar-amt-neg">-${formatCompact(expense)}</span>` : ""}
+            ${dueUnpaid ? `<span class="calendar-due-dot"></span>` : ""}
         `;
+        cell.addEventListener("click", () => openDayDetailModal(day));
         grid.appendChild(cell);
     }
+}
+
+/* ---------- Calendar day detail modal ---------- */
+
+function openDayDetailModal(day) {
+    const { incomes, payments, due } = getDayDetail(activeMonthKey, day);
+    const dateStr = `${activeMonthKey}-${pad2(day)}`;
+
+    document.getElementById("dayDetailTitle").textContent = formatDate(dateStr);
+
+    const rows = [];
+    incomes.forEach(i => rows.push(`
+        <div class="item">
+            <span>${i.icon || "💼"} ${escapeHtml(i.name)}</span>
+            <strong class="positive">+${formatMoney(i.amount)}</strong>
+        </div>
+    `));
+    payments.forEach(p => rows.push(`
+        <div class="item">
+            <span>💵 Paid: ${escapeHtml(p.name)}</span>
+            <strong class="negative">-${formatMoney(p.amount)}</strong>
+        </div>
+    `));
+    due.forEach(c => {
+        const status = getCommitmentStatus(c);
+        rows.push(`
+            <div class="item">
+                <span>${c.icon || "💳"} ${escapeHtml(c.name)} <span class="tag status-tag status-${status}">${status === "paid" ? "Paid" : status === "partial" ? "Partial" : "Unpaid"}</span></span>
+                <strong>${formatMoney(c.amount)}<span class="upcoming-date"> due</span></strong>
+            </div>
+        `);
+    });
+
+    document.getElementById("dayDetailList").innerHTML = rows.join("");
+    document.getElementById("dayDetailEmpty").hidden = rows.length > 0;
+    document.getElementById("dayDetailModal").hidden = false;
+}
+
+function closeDayDetailModal() {
+    document.getElementById("dayDetailModal").hidden = true;
 }
 
 /* ================= BREAKDOWN (Expense pie chart view) ================= */
@@ -1721,6 +1782,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("cancelPaymentBtn").addEventListener("click", closePaymentModal);
     document.getElementById("savePaymentBtn").addEventListener("click", savePaymentFromModal);
+
+    document.getElementById("closeDayDetailBtn").addEventListener("click", closeDayDetailModal);
 
     document.getElementById("viewRecurringLinkBtn").addEventListener("click", () => switchView("recurring"));
     document.getElementById("viewRecurringFromBreakdownBtn").addEventListener("click", () => switchView("recurring"));
