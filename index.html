@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Commitment</title>
 
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <meta name="theme-color" content="#1c1c1e">
+    <meta name="theme-color" content="#0b0c10">
 </head>
 
 <body>
@@ -17,7 +17,10 @@
     <div class="app">
 
         <header>
-            <h1>My Commitment</h1>
+            <div class="header-top">
+                <h1>My Commitment</h1>
+                <button id="profileSwitchBtn" class="profile-chip">👤 <span id="activeProfileName">Me</span></button>
+            </div>
             <p class="month-switcher">
                 <button id="prevMonthBtn" class="month-nav-btn" aria-label="Previous month">‹</button>
                 <span id="activeMonthLabel">—</span>
@@ -28,60 +31,166 @@
         <!-- HOME VIEW -->
         <section id="view-home" class="view">
 
-            <section class="summary">
-
-                <div class="card">
-                    <span>Monthly Income</span>
+            <section class="summary summary-2col">
+                <div class="card income-card">
+                    <span>Income</span>
                     <strong id="incomeValue">RM 0.00</strong>
                 </div>
-
-                <div class="card">
-                    <span>Total Commitment</span>
+                <div class="card expense-card">
+                    <span>Expense</span>
                     <strong id="totalCommitmentValue">RM 0.00</strong>
                 </div>
+            </section>
 
+            <section class="calendar-card">
+                <div class="calendar-weekdays">
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </section>
+
+            <section class="summary">
                 <div class="card">
                     <span>This Month Saving</span>
                     <strong id="monthSavingValue">RM 0.00</strong>
                     <span id="overspendBadge" class="overspend-badge" hidden>⚠️ Overspending</span>
                 </div>
-
-                <div class="card">
-                    <span>Saving Balance</span>
-                    <strong id="savingBalanceValue">RM 0.00</strong>
-                </div>
-
                 <div class="card">
                     <span>Available Balance</span>
                     <strong id="availableBalanceValue">RM 0.00</strong>
                 </div>
-
             </section>
 
             <section class="list-section">
-
                 <div class="section-title">
                     <h2>Income Sources</h2>
                     <button id="addIncomeBtn">+ Add</button>
                 </div>
-
                 <div id="incomeList"></div>
                 <p id="incomeEmptyState" class="empty-state" hidden>No income sources yet. Tap <strong>+ Add</strong> to add your job, part-time work, or any other income.</p>
-
             </section>
 
             <section class="list-section">
-
                 <div class="section-title">
                     <h2>Commitments</h2>
                     <button id="addCommitmentBtn">+ Add</button>
                 </div>
-
                 <div id="commitmentList"></div>
                 <p id="emptyState" class="empty-state" hidden>No commitments yet for this month. Tap <strong>+ Add</strong> to get started.</p>
-                <div id="categoryBreakdown" class="category-breakdown" hidden></div>
-
+                <button id="viewRecurringLinkBtn" class="link-btn">📆 View recurring commitments →</button>
             </section>
+
+        </section>
+
+        <!-- WALLET VIEW (Accounts / Goals / Items) -->
+        <section id="view-wallet" class="view" hidden>
+
+            <div class="segmented" id="walletTabs">
+                <button class="segmented-btn active" data-wallet-tab="accounts">Accounts</button>
+                <button class="segmented-btn" data-wallet-tab="goals">Goals</button>
+                <button class="segmented-btn" data-wallet-tab="items">Items</button>
+            </div>
+
+            <!-- Accounts sub-tab -->
+            <div id="wallet-accounts" class="wallet-pane">
+                <div class="networth-card">
+                    <span>Net Assets</span>
+                    <strong id="netAssetsValue">RM 0.00</strong>
+                    <div class="networth-split">
+                        <div><span>Assets</span><strong id="netAssetsPositiveValue" class="positive">RM 0.00</strong></div>
+                        <div><span>Debt</span><strong id="netDebtValue" class="negative">RM 0.00</strong></div>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <h2>Accounts</h2>
+                    <button id="addAccountBtn">+ Add</button>
+                </div>
+                <div id="accountGroups"></div>
+                <p id="accountsEmptyState" class="empty-state" hidden>No accounts yet. Tap <strong>+ Add</strong> to add cash, an e-wallet, or a bank account.</p>
+            </div>
+
+            <!-- Goals sub-tab -->
+            <div id="wallet-goals" class="wallet-pane" hidden>
+                <div class="section-title">
+                    <h2>Saving Goals</h2>
+                    <button id="addGoalBtn">+ Add</button>
+                </div>
+                <div id="goalList"></div>
+                <p id="goalsEmptyState" class="empty-state" hidden>No saving goals yet. Tap <strong>+ Add</strong> to set a target — e.g. Emergency Fund, Car, Travel.</p>
+            </div>
+
+            <!-- Items sub-tab -->
+            <div id="wallet-items" class="wallet-pane" hidden>
+                <div class="section-title">
+                    <h2>Items</h2>
+                    <button id="addItemBtn">+ Add</button>
+                </div>
+                <h3 class="sub-heading">Assets &amp; Valuables</h3>
+                <div id="assetItemList"></div>
+                <p id="assetItemsEmptyState" class="empty-state" hidden>No assets tracked yet.</p>
+                <h3 class="sub-heading">Wishlist</h3>
+                <div id="wishlistItemList"></div>
+                <p id="wishlistItemsEmptyState" class="empty-state" hidden>No wishlist items yet.</p>
+            </div>
+
+        </section>
+
+        <!-- BREAKDOWN VIEW -->
+        <section id="view-breakdown" class="view" hidden>
+
+            <div class="breakdown-card">
+                <h2 class="breakdown-heading">Expense Breakdown</h2>
+                <p class="breakdown-month" id="breakdownMonthLabel">—</p>
+                <div class="pie-wrap">
+                    <div id="pieChart" class="pie-chart"></div>
+                    <div class="pie-center">
+                        <span>Total</span>
+                        <strong id="breakdownTotalValue">RM 0.00</strong>
+                    </div>
+                </div>
+                <div id="breakdownLegend" class="breakdown-legend"></div>
+                <p id="breakdownEmptyState" class="empty-state" hidden>No expenses recorded this month yet.</p>
+            </div>
+
+            <button id="viewRecurringFromBreakdownBtn" class="link-btn">📆 View recurring commitments →</button>
+
+        </section>
+
+        <!-- RECURRING VIEW (drill-in) -->
+        <section id="view-recurring" class="view" hidden>
+
+            <button id="backFromRecurringBtn" class="back-btn">‹ Back</button>
+
+            <div class="recurring-total-card">
+                <span>Recurring total</span>
+                <strong id="recurringMonthlyValue">RM 0.00</strong>
+                <span class="recurring-per-month">/month</span>
+            </div>
+
+            <div class="summary summary-3col">
+                <div class="card">
+                    <span>Left this month</span>
+                    <strong id="recurringLeftValue">RM 0.00</strong>
+                </div>
+                <div class="card">
+                    <span>Per year</span>
+                    <strong id="recurringYearlyValue">RM 0.00</strong>
+                </div>
+                <div class="card">
+                    <span>Active</span>
+                    <strong id="recurringActiveValue">0</strong>
+                </div>
+            </div>
+
+            <h3 class="sub-heading">Next 7 days</h3>
+            <div id="recurringNext7Strip" class="next7-strip"></div>
+
+            <div id="recurringUpcomingList"></div>
+            <p id="recurringEmptyState" class="empty-state" hidden>No recurring commitments due in the next 7 days.</p>
+
+            <h3 class="sub-heading">All recurring commitments</h3>
+            <div id="recurringAllList"></div>
 
         </section>
 
@@ -97,32 +206,15 @@
 
         </section>
 
-        <!-- SAVINGS VIEW -->
-        <section id="view-savings" class="view" hidden>
-
-            <div class="card balance-card">
-                <span>Total Savings Balance</span>
-                <strong id="savingsTotalValue">RM 0.00</strong>
-            </div>
-
-            <div class="section-title">
-                <h2>Transactions — <span id="transactionsMonthLabel"></span></h2>
-            </div>
-            <p class="settings-help">Deposits and withdrawals adjust your Saving Balance directly — separate from your regular income and commitments.</p>
-            <div class="transaction-actions">
-                <button id="addDepositBtn" class="settings-btn">+ Deposit</button>
-                <button id="addWithdrawBtn" class="settings-btn">− Withdraw</button>
-            </div>
-            <div id="savingsTransactionList"></div>
-            <p id="savingsTransactionEmpty" class="empty-state" hidden>No deposits or withdrawals this month.</p>
-
-            <h2 class="sub-heading">Monthly Contributions</h2>
-            <div id="savingsLog"></div>
-
-        </section>
-
         <!-- SETTINGS VIEW -->
         <section id="view-settings" class="view" hidden>
+
+            <div class="settings-group">
+                <label>Profiles</label>
+                <p class="settings-help">Each profile keeps its own separate data on this device — e.g. one for you, one for your spouse. Switching profiles doesn't need a login; everything stays local to this device/browser.</p>
+                <div id="profileList"></div>
+                <button id="addProfileBtn" class="settings-btn">+ Add Profile</button>
+            </div>
 
             <div class="settings-group">
                 <label for="currencyInput">Currency Symbol</label>
@@ -131,7 +223,7 @@
 
             <div class="settings-group">
                 <label>Backup &amp; Sync Between Phones</label>
-                <p class="settings-help">Export on one phone, send the file to the other (AirDrop, WhatsApp, email), then Import there. You'll be asked to Merge (combine both, recommended) or Replace.</p>
+                <p class="settings-help">Export on one phone, send the file to the other (AirDrop, WhatsApp, email), then Import there. You'll be asked to Merge (combine both, recommended) or Replace. Export/Import applies to the current profile only.</p>
                 <button id="exportBtn" class="settings-btn">Export Data (JSON)</button>
                 <button id="importBtn" class="settings-btn">Import Data</button>
                 <input type="file" id="importFile" accept="application/json" hidden>
@@ -139,17 +231,18 @@
 
             <div class="settings-group">
                 <label>Danger Zone</label>
-                <button id="resetBtn" class="settings-btn danger">Reset All Data</button>
+                <button id="resetBtn" class="settings-btn danger">Reset This Profile's Data</button>
             </div>
 
-            <p class="app-version">My Commitment — v4.2</p>
+            <p class="app-version">My Commitment — v5.0</p>
 
         </section>
 
         <nav>
             <button class="nav-btn active" data-view="home">🏠<br>Home</button>
+            <button class="nav-btn" data-view="wallet">💼<br>Wallet</button>
+            <button class="nav-btn" data-view="breakdown">📊<br>Breakdown</button>
             <button class="nav-btn" data-view="monthly">📅<br>Monthly</button>
-            <button class="nav-btn" data-view="savings">💰<br>Savings</button>
             <button class="nav-btn" data-view="settings">⚙️<br>Settings</button>
         </nav>
 
@@ -168,6 +261,11 @@
 
             <label for="entryAmount">Amount</label>
             <input type="number" id="entryAmount" min="0" step="0.01" placeholder="0.00">
+
+            <div id="incomeOnlyFields">
+                <label for="entryReceivedDate">Day of month received</label>
+                <input type="number" id="entryReceivedDate" min="1" max="28" placeholder="1">
+            </div>
 
             <div id="commitmentOnlyFields">
 
@@ -219,21 +317,152 @@
         </div>
     </div>
 
-    <!-- Deposit/Withdraw Modal — for savings transactions -->
-    <div id="transactionModal" class="modal-backdrop" hidden>
+    <!-- Add/Edit Account Modal -->
+    <div id="accountModal" class="modal-backdrop" hidden>
         <div class="modal">
-            <h3 id="transactionModalTitle">Add Deposit</h3>
+            <h3 id="accountModalTitle">Add Account</h3>
 
-            <label for="transactionAmount">Amount</label>
-            <input type="number" id="transactionAmount" min="0" step="0.01" placeholder="0.00">
+            <label for="accountIcon">Icon (emoji)</label>
+            <input type="text" id="accountIcon" maxlength="4" placeholder="🏦">
 
-            <label for="transactionNote">Note (optional)</label>
-            <input type="text" id="transactionNote" placeholder="e.g. year-end bonus, car repair">
+            <label for="accountName">Name</label>
+            <input type="text" id="accountName" placeholder="e.g. Maybank, TNG, Cash">
+
+            <label for="accountType">Type</label>
+            <select id="accountType">
+                <option value="cash">💵 Cash</option>
+                <option value="ewallet">📱 E-Wallet</option>
+                <option value="bank">🏦 Bank Account</option>
+                <option value="debt">💳 Debt / Credit Card</option>
+            </select>
+
+            <label for="accountBalance">Current Balance</label>
+            <input type="number" id="accountBalance" step="0.01" placeholder="0.00">
+            <p class="settings-help">Set this once when adding the account, then use Deposit/Withdraw on the account to keep it updated — like your real bank balance, this app can't read it automatically.</p>
 
             <div class="modal-actions">
-                <button id="deleteTransactionBtn" class="settings-btn danger" hidden>Delete</button>
-                <button id="cancelTransactionBtn" class="settings-btn">Cancel</button>
-                <button id="saveTransactionBtn" class="settings-btn primary">Save</button>
+                <button id="deleteAccountBtn" class="settings-btn danger" hidden>Delete</button>
+                <button id="cancelAccountBtn" class="settings-btn">Cancel</button>
+                <button id="saveAccountBtn" class="settings-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Deposit/Withdraw Modal -->
+    <div id="accountTxModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="accountTxModalTitle">Deposit</h3>
+
+            <label for="accountTxAmount">Amount</label>
+            <input type="number" id="accountTxAmount" min="0" step="0.01" placeholder="0.00">
+
+            <label for="accountTxNote">Note (optional)</label>
+            <input type="text" id="accountTxNote" placeholder="e.g. salary in, ATM withdrawal">
+
+            <div class="modal-actions">
+                <button id="cancelAccountTxBtn" class="settings-btn">Cancel</button>
+                <button id="saveAccountTxBtn" class="settings-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Goal Modal -->
+    <div id="goalModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="goalModalTitle">Add Goal</h3>
+
+            <label for="goalIcon">Icon (emoji)</label>
+            <input type="text" id="goalIcon" maxlength="4" placeholder="🎯">
+
+            <label for="goalName">Name</label>
+            <input type="text" id="goalName" placeholder="e.g. Emergency Fund, Car, Travel">
+
+            <label for="goalTarget">Target Amount</label>
+            <input type="number" id="goalTarget" min="0" step="0.01" placeholder="0.00">
+
+            <label for="goalDeadline">Deadline (optional)</label>
+            <input type="date" id="goalDeadline">
+
+            <div class="modal-actions">
+                <button id="deleteGoalBtn" class="settings-btn danger" hidden>Delete</button>
+                <button id="cancelGoalBtn" class="settings-btn">Cancel</button>
+                <button id="saveGoalBtn" class="settings-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Deposit/Withdraw Modal -->
+    <div id="goalTxModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="goalTxModalTitle">Add to Goal</h3>
+
+            <label for="goalTxAmount">Amount</label>
+            <input type="number" id="goalTxAmount" min="0" step="0.01" placeholder="0.00">
+
+            <div class="modal-actions">
+                <button id="cancelGoalTxBtn" class="settings-btn">Cancel</button>
+                <button id="saveGoalTxBtn" class="settings-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Item Modal -->
+    <div id="itemModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="itemModalTitle">Add Item</h3>
+
+            <label for="itemKind">Type</label>
+            <select id="itemKind">
+                <option value="asset">Asset / Valuable</option>
+                <option value="wishlist">Wishlist</option>
+            </select>
+
+            <label for="itemIcon">Icon (emoji)</label>
+            <input type="text" id="itemIcon" maxlength="4" placeholder="📦">
+
+            <label for="itemName">Name</label>
+            <input type="text" id="itemName" placeholder="e.g. Laptop, Car, iPhone 17">
+
+            <label for="itemAmount" id="itemAmountLabel">Estimated Value</label>
+            <input type="number" id="itemAmount" min="0" step="0.01" placeholder="0.00">
+
+            <label for="itemNotes">Notes (optional)</label>
+            <input type="text" id="itemNotes" placeholder="optional notes">
+
+            <div class="modal-actions">
+                <button id="deleteItemBtn" class="settings-btn danger" hidden>Delete</button>
+                <button id="cancelItemBtn" class="settings-btn">Cancel</button>
+                <button id="saveItemBtn" class="settings-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Switcher / Manager Modal -->
+    <div id="profileModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="profileModalTitle">Switch Profile</h3>
+            <div id="profileSwitchList"></div>
+            <div class="modal-actions">
+                <button id="closeProfileSwitchBtn" class="settings-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Profile Modal -->
+    <div id="profileEditModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="profileEditModalTitle">Add Profile</h3>
+
+            <label for="profileEditIcon">Icon (emoji)</label>
+            <input type="text" id="profileEditIcon" maxlength="4" placeholder="👤">
+
+            <label for="profileEditName">Name</label>
+            <input type="text" id="profileEditName" placeholder="e.g. Me, Wife">
+
+            <div class="modal-actions">
+                <button id="deleteProfileBtn" class="settings-btn danger" hidden>Delete</button>
+                <button id="cancelProfileEditBtn" class="settings-btn">Cancel</button>
+                <button id="saveProfileEditBtn" class="settings-btn primary">Save</button>
             </div>
         </div>
     </div>

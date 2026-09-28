@@ -1,3 +1,16 @@
+:root {
+    --bg: #0b0c10;
+    --card: #17181d;
+    --card-alt: #1f2128;
+    --text: #f2f2f7;
+    --text-muted: #9a9aa5;
+    --accent: #4c6fff;
+    --green: #30d158;
+    --red: #ff453a;
+    --yellow: #ffd60a;
+    --border: #2a2c34;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -9,9 +22,9 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f7;
-    color: #1c1c1e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
 }
 
 .app {
@@ -25,26 +38,40 @@ header {
     margin-bottom: 20px;
 }
 
-header h1 {
-    font-size: 28px;
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
-header p {
-    color: #777;
-    margin-top: 5px;
+header h1 {
+    font-size: 26px;
+}
+
+.profile-chip {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
 }
 
 .month-switcher {
     display: flex;
     align-items: center;
     gap: 6px;
+    margin-top: 8px;
+    color: var(--text-muted);
 }
 
 .month-nav-btn {
     border: none;
     background: none;
     font-size: 16px;
-    color: #1c1c1e;
+    color: var(--text);
     cursor: pointer;
     padding: 0 6px;
     line-height: 1;
@@ -60,8 +87,12 @@ header p {
     gap: 12px;
 }
 
+.summary-3col {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
 .card {
-    background: white;
+    background: var(--card);
     padding: 16px;
     border-radius: 16px;
 }
@@ -70,10 +101,13 @@ header p {
     cursor: pointer;
 }
 
+.income-card strong { color: var(--green); }
+.expense-card strong { color: var(--red); }
+
 .card span {
     display: block;
-    font-size: 13px;
-    color: #777;
+    font-size: 12px;
+    color: var(--text-muted);
     margin-bottom: 8px;
 }
 
@@ -82,35 +116,27 @@ header p {
 }
 
 .card strong.negative {
-    color: #d9363e;
+    color: var(--red);
+}
+
+.card strong.positive {
+    color: var(--green);
 }
 
 .overspend-badge {
     display: inline-block;
     margin-top: 6px;
     font-size: 11px;
-    color: #d9363e;
-    background: #fdecea;
+    color: var(--red);
+    background: rgba(255, 69, 58, 0.15);
     padding: 3px 8px;
     border-radius: 20px;
 }
 
-.balance-card {
-    text-align: center;
-    padding: 24px;
-}
-
-.balance-card span {
-    font-size: 14px;
-}
-
-.balance-card strong {
-    font-size: 26px;
-}
-
 .sub-heading {
     margin: 20px 0 10px;
-    font-size: 16px;
+    font-size: 15px;
+    color: var(--text-muted);
 }
 
 .list-section {
@@ -125,20 +151,45 @@ header p {
 }
 
 .section-title h2 {
-    font-size: 20px;
+    font-size: 19px;
 }
 
 .section-title button {
     border: none;
-    background: #1c1c1e;
+    background: var(--accent);
     color: white;
     padding: 8px 14px;
     border-radius: 20px;
     cursor: pointer;
+    font-size: 13px;
+}
+
+.link-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--accent);
+    padding: 12px;
+    border-radius: 12px;
+    margin-top: 14px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.back-btn {
+    border: none;
+    background: none;
+    color: var(--text);
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    padding: 4px 0;
 }
 
 .item {
-    background: white;
+    background: var(--card);
     padding: 17px;
     margin-bottom: 8px;
     border-radius: 14px;
@@ -158,17 +209,17 @@ header p {
 }
 
 .item strong.negative {
-    color: #d9363e;
+    color: var(--red);
 }
 
 .item strong.positive {
-    color: #1a7f37;
+    color: var(--green);
 }
 
 .delete-btn {
     border: none;
     background: none;
-    color: #aaa;
+    color: #6a6a72;
     font-size: 14px;
     cursor: pointer;
     padding: 4px 6px;
@@ -176,7 +227,7 @@ header p {
 }
 
 .delete-btn:hover {
-    color: #d9363e;
+    color: var(--red);
 }
 
 .commitment-item {
@@ -215,39 +266,49 @@ header p {
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 20px;
-    background: #f0f0f0;
-    color: #555;
+    background: var(--card-alt);
+    color: var(--text-muted);
     white-space: nowrap;
 }
 
 .status-tag.status-paid {
-    background: #e6f4ea;
-    color: #1a7f37;
+    background: rgba(48, 209, 88, 0.15);
+    color: var(--green);
 }
 
 .status-tag.status-partial {
-    background: #fff4e5;
-    color: #b7791f;
+    background: rgba(255, 214, 10, 0.15);
+    color: var(--yellow);
 }
 
 .status-tag.status-unpaid {
-    background: #f0f0f0;
-    color: #777;
+    background: var(--card-alt);
+    color: var(--text-muted);
 }
 
 .due-tag.overdue {
-    background: #fdecea;
-    color: #d9363e;
+    background: rgba(255, 69, 58, 0.15);
+    color: var(--red);
+}
+
+.tag.overdue {
+    background: rgba(255, 69, 58, 0.15);
+    color: var(--red);
 }
 
 .carried-tag {
-    background: #eef1ff;
-    color: #4453c9;
+    background: rgba(76, 111, 255, 0.15);
+    color: #90a4ff;
 }
 
 .item-progress {
     font-size: 12px;
-    color: #888;
+    color: var(--text-muted);
+}
+
+.upcoming-date {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .item-actions {
@@ -260,8 +321,8 @@ header p {
 
 .mark-paid-btn {
     border: none;
-    background: #e6f4ea;
-    color: #1a7f37;
+    background: rgba(48, 209, 88, 0.15);
+    color: var(--green);
     font-size: 14px;
     width: 26px;
     height: 26px;
@@ -271,8 +332,8 @@ header p {
 
 .pay-btn {
     border: none;
-    background: #eef1ff;
-    color: #4453c9;
+    background: rgba(76, 111, 255, 0.15);
+    color: #90a4ff;
     font-size: 12px;
     width: 26px;
     height: 26px;
@@ -280,42 +341,12 @@ header p {
     cursor: pointer;
 }
 
-.transaction-actions {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.transaction-actions button {
-    flex: 1;
-}
-
-.category-breakdown {
-    background: white;
-    border-radius: 14px;
-    padding: 14px 17px;
-    margin-top: 8px;
-}
-
-.breakdown-title {
-    font-size: 13px;
-    color: #777;
-    margin-bottom: 8px;
-}
-
-.breakdown-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    padding: 4px 0;
-}
-
 .month-item {
     cursor: pointer;
 }
 
 .month-item.active-month {
-    border: 2px solid #1c1c1e;
+    border: 2px solid var(--accent);
 }
 
 .month-item-main {
@@ -326,20 +357,20 @@ header p {
 
 .month-item-main span {
     font-size: 12px;
-    color: #777;
+    color: var(--text-muted);
 }
 
 .empty-state {
     text-align: center;
-    color: #888;
+    color: var(--text-muted);
     padding: 30px 10px;
     font-size: 14px;
-    background: white;
+    background: var(--card);
     border-radius: 14px;
 }
 
 .settings-group {
-    background: white;
+    background: var(--card);
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
@@ -350,27 +381,29 @@ header p {
 
 .settings-group label {
     font-size: 13px;
-    color: #777;
+    color: var(--text-muted);
 }
 
 .settings-help {
     font-size: 12px;
-    color: #999;
+    color: #7a7a84;
     line-height: 1.4;
     margin-top: -4px;
 }
 
 .settings-group input[type="text"] {
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--text);
     border-radius: 8px;
     font-size: 15px;
 }
 
 .settings-btn {
     border: none;
-    background: #f0f0f0;
-    color: #1c1c1e;
+    background: var(--card-alt);
+    color: var(--text);
     padding: 12px;
     border-radius: 10px;
     font-size: 14px;
@@ -379,18 +412,18 @@ header p {
 }
 
 .settings-btn.primary {
-    background: #1c1c1e;
+    background: var(--accent);
     color: white;
 }
 
 .settings-btn.danger {
-    background: #fdecea;
-    color: #d9363e;
+    background: rgba(255, 69, 58, 0.15);
+    color: var(--red);
 }
 
 .app-version {
     text-align: center;
-    color: #aaa;
+    color: #55555c;
     font-size: 12px;
     margin-top: 10px;
 }
@@ -402,33 +435,33 @@ nav {
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    background: white;
+    background: var(--card);
     display: flex;
     justify-content: space-around;
-    padding: 10px 5px;
-    border-top: 1px solid #ddd;
+    padding: 10px 5px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
 }
 
 nav button {
     border: none;
     background: none;
-    font-size: 12px;
-    color: #555;
-    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 6px 8px;
     border-radius: 10px;
     cursor: pointer;
 }
 
 nav button.active {
-    color: #1c1c1e;
+    color: var(--text);
     font-weight: bold;
-    background: #f0f0f0;
+    background: var(--card-alt);
 }
 
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -441,11 +474,13 @@ nav button.active {
 }
 
 .modal {
-    background: white;
+    background: var(--card);
     border-radius: 16px;
     padding: 20px;
     width: 100%;
     max-width: 400px;
+    max-height: 85vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -457,13 +492,15 @@ nav button.active {
 
 .modal label {
     font-size: 13px;
-    color: #777;
+    color: var(--text-muted);
 }
 
 .modal input,
 .modal select {
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
+    background: var(--card-alt);
+    color: var(--text);
     border-radius: 8px;
     font-size: 15px;
     width: 100%;
@@ -475,7 +512,7 @@ nav button.active {
     align-items: center;
     gap: 8px;
     font-size: 14px !important;
-    color: #1c1c1e !important;
+    color: var(--text) !important;
 }
 
 .checkbox-label input {
@@ -493,4 +530,358 @@ nav button.active {
 .item,
 .card {
     transition: opacity 0.15s ease;
+}
+
+/* ---------- Calendar (Home) ---------- */
+
+.calendar-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 14px;
+    margin-top: 12px;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 6px;
+}
+
+.calendar-weekdays span {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.calendar-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    background: var(--card-alt);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 2px;
+    min-width: 0;
+}
+
+.calendar-cell-blank {
+    background: transparent;
+}
+
+.calendar-day-num {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.calendar-today .calendar-day-num {
+    color: var(--text);
+    font-weight: bold;
+}
+
+.calendar-today {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.calendar-amt {
+    font-size: 8px;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.calendar-amt-pos { color: var(--green); }
+.calendar-amt-neg { color: var(--red); }
+
+.calendar-positive { background: rgba(48, 209, 88, 0.14); }
+.calendar-negative { background: rgba(255, 69, 58, 0.14); }
+
+/* ---------- Segmented control (Wallet sub-tabs) ---------- */
+
+.segmented {
+    display: flex;
+    background: var(--card-alt);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.segmented-btn {
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    padding: 9px;
+    border-radius: 9px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.segmented-btn.active {
+    background: var(--card);
+    color: var(--text);
+    font-weight: bold;
+}
+
+.wallet-pane[hidden] {
+    display: none;
+}
+
+/* ---------- Net worth card (Accounts) ---------- */
+
+.networth-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.networth-card > span {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.networth-card > strong {
+    display: block;
+    font-size: 30px;
+    margin: 6px 0 14px;
+}
+
+.networth-split {
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.networth-split span {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.networth-split strong {
+    font-size: 15px;
+}
+
+.account-group {
+    margin-bottom: 18px;
+}
+
+.account-group-title {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 4px 8px;
+}
+
+.account-item .account-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.account-icon {
+    font-size: 20px;
+}
+
+.account-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Goals ---------- */
+
+.goal-main {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.goal-target-of {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.progress-bar {
+    height: 6px;
+    background: var(--card-alt);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+}
+
+/* ---------- Breakdown (pie chart) ---------- */
+
+.breakdown-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+}
+
+.breakdown-heading {
+    font-size: 19px;
+}
+
+.breakdown-month {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 18px;
+}
+
+.pie-wrap {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px;
+}
+
+.pie-chart {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: var(--card-alt);
+}
+
+.pie-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--card);
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    margin: auto;
+}
+
+.pie-center span {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.pie-center strong {
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.breakdown-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+}
+
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legend-label {
+    flex: 1;
+}
+
+.legend-amount {
+    color: var(--text-muted);
+}
+
+.legend-pct {
+    width: 38px;
+    text-align: right;
+    font-weight: bold;
+}
+
+/* ---------- Recurring view ---------- */
+
+.recurring-total-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.recurring-total-card span:first-child {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.recurring-total-card strong {
+    font-size: 30px;
+}
+
+.recurring-per-month,
+.recurring-permonth {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.next7-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.next7-cell {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 8px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.next7-cell span {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.next7-cell strong {
+    font-size: 14px;
+}
+
+.next7-today {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
 }
