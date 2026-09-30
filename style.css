@@ -397,7 +397,10 @@ header h1 {
     background: var(--card-alt);
     color: var(--text);
     border-radius: 8px;
-    font-size: 15px;
+    /* 16px, not 15px: iOS Safari auto-zooms the whole page on focus for any
+       input/select with a font-size under 16px -- this is what was really
+       causing the "zoom" behavior, more than pinch-zoom itself. */
+    font-size: 16px;
 }
 
 .settings-btn {
@@ -502,7 +505,7 @@ nav button.active {
     background: var(--card-alt);
     color: var(--text);
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 16px; /* keep >= 16px so iOS doesn't auto-zoom on focus */
     width: 100%;
     font-family: inherit;
 }
