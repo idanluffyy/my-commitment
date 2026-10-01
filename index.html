@@ -140,7 +140,11 @@
         <section id="view-breakdown" class="view" hidden>
 
             <div class="breakdown-card">
-                <h2 class="breakdown-heading">Expense Breakdown</h2>
+                <div class="segmented" id="breakdownTabs">
+                    <button type="button" class="segmented-btn active" data-breakdown-tab="expense">Expenses</button>
+                    <button type="button" class="segmented-btn" data-breakdown-tab="income">Income</button>
+                </div>
+                <h2 class="breakdown-heading" id="breakdownHeading">Expense Breakdown</h2>
                 <p class="breakdown-month" id="breakdownMonthLabel">—</p>
                 <div class="pie-wrap">
                     <div id="pieChart" class="pie-chart"></div>
@@ -222,6 +226,30 @@
             </div>
 
             <div class="settings-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="salaryEnabledInput">
+                    Permanent Income (Salary)
+                </label>
+                <p class="settings-help">When enabled, this income is automatically added to every newly-created month, so you don't need to re-enter it each time.</p>
+
+                <div id="salaryFields">
+                    <label for="salaryIconInput">Icon (emoji)</label>
+                    <input type="text" id="salaryIconInput" maxlength="4" placeholder="💼">
+
+                    <label for="salaryNameInput">Name</label>
+                    <input type="text" id="salaryNameInput" placeholder="e.g. Salary">
+
+                    <label for="salaryAmountInput">Amount</label>
+                    <input type="number" id="salaryAmountInput" min="0" step="0.01" placeholder="0.00">
+
+                    <label for="salaryDateInput">Day of month received</label>
+                    <input type="number" id="salaryDateInput" min="1" max="28" placeholder="1">
+
+                    <button id="saveSalaryBtn" class="settings-btn primary">Save Salary Settings</button>
+                </div>
+            </div>
+
+            <div class="settings-group">
                 <label>Backup &amp; Sync Between Phones</label>
                 <p class="settings-help">Export on one phone, send the file to the other (AirDrop, WhatsApp, email), then Import there. You'll be asked to Merge (combine both, recommended) or Replace. Export/Import applies to the current profile only.</p>
                 <button id="exportBtn" class="settings-btn">Export Data (JSON)</button>
@@ -234,7 +262,7 @@
                 <button id="resetBtn" class="settings-btn danger">Reset This Profile's Data</button>
             </div>
 
-            <p class="app-version">My Commitment — v5.0</p>
+            <p class="app-version">My Commitment — v5.1</p>
 
         </section>
 
@@ -444,7 +472,41 @@
             <div id="dayDetailList"></div>
             <p id="dayDetailEmpty" class="empty-state" hidden>Nothing recorded on this day.</p>
             <div class="modal-actions">
-                <button id="closeDayDetailBtn" class="settings-btn">Close</button>
+                <button id="addDayIncomeBtn" class="settings-btn">+ Income</button>
+                <button id="addDayExpenseBtn" class="settings-btn">+ Expense</button>
+                <button id="closeDayDetailBtn" class="settings-btn primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Dated Income/Expense Entry Modal -->
+    <div id="quickEntryModal" class="modal-backdrop" hidden>
+        <div class="modal">
+            <h3 id="quickEntryModalTitle">Add Expense</h3>
+
+            <label for="quickEntryIcon">Icon (emoji)</label>
+            <input type="text" id="quickEntryIcon" maxlength="4" placeholder="📦">
+
+            <label for="quickEntryName">Name</label>
+            <input type="text" id="quickEntryName" placeholder="e.g. Lunch">
+
+            <label for="quickEntryAmount">Amount (RM)</label>
+            <input type="number" id="quickEntryAmount" step="0.01" min="0" placeholder="0.00">
+
+            <div id="quickEntryCategoryRow">
+                <label for="quickEntryCategory">Category</label>
+                <select id="quickEntryCategory">
+                    <option value="housing">🏠 Housing</option>
+                    <option value="transport">🚗 Transport</option>
+                    <option value="food">🍔 Food</option>
+                    <option value="bills">💡 Bills</option>
+                    <option value="others">📦 Others</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button id="cancelQuickEntryBtn" class="settings-btn">Cancel</button>
+                <button id="saveQuickEntryBtn" class="settings-btn primary">Save</button>
             </div>
         </div>
     </div>

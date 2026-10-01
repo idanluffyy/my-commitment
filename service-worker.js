@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-commitment-v8";
+const CACHE_NAME = "my-commitment-v9";
 
 const FILES_TO_CACHE = [
     "./",

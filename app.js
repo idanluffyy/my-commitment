@@ -148,6 +148,9 @@ function loadData() {
             const parsed = JSON.parse(raw);
             if (parsed && typeof parsed === "object") {
                 if (!parsed.settings) parsed.settings = { currency: "RM" };
+                if (!parsed.settings.permanentIncome) {
+                    parsed.settings.permanentIncome = { enabled: false, name: "Salary", icon: "💼", amount: 0, receivedDate: 1 };
+                }
                 if (!parsed.months) parsed.months = {};
                 if (!Array.isArray(parsed.accounts)) parsed.accounts = [];
                 if (!Array.isArray(parsed.accountTransactions)) parsed.accountTransactions = [];
@@ -160,7 +163,10 @@ function loadData() {
     } catch (e) {
         console.warn("Could not read saved data, starting fresh.", e);
     }
-    return { settings: { currency: "RM" }, months: {}, accounts: [], accountTransactions: [], goals: [], items: [] };
+    return {
+        settings: { currency: "RM", permanentIncome: { enabled: false, name: "Salary", icon: "💼", amount: 0, receivedDate: 1 } },
+        months: {}, accounts: [], accountTransactions: [], goals: [], items: []
+    };
 }
 
 // Keeps older backups working as the data model grows. Never drops a record —
@@ -183,6 +189,13 @@ function migrateData(parsed) {
         if (!Array.isArray(month.paymentLog)) {
             month.paymentLog = [];
         }
+        if (!Array.isArray(month.quickEntries)) {
+            month.quickEntries = [];
+        }
+        month.quickEntries.forEach(q => {
+            if (q.updatedAt === undefined) q.updatedAt = 0;
+            if (q.type === "expense" && !q.category) q.category = "others";
+        });
         month.incomes.forEach(i => {
             if (i.updatedAt === undefined) i.updatedAt = 0;
             if (!i.receivedDate) i.receivedDate = 1;
@@ -263,7 +276,8 @@ function saveData() {
 
 function ensureMonth(key) {
     if (!data.months[key]) {
-        data.months[key] = { incomes: [], commitments: [], savingsTransactions: [], paymentLog: [] };
+        data.months[key] = { incomes: [], commitments: [], savingsTransactions: [], paymentLog: [], quickEntries: [] };
+        seedPermanentIncome(data.months[key].incomes);
     }
     if (!data.months[key].savingsTransactions) {
         data.months[key].savingsTransactions = [];
@@ -271,7 +285,31 @@ function ensureMonth(key) {
     if (!data.months[key].paymentLog) {
         data.months[key].paymentLog = [];
     }
+    if (!data.months[key].quickEntries) {
+        data.months[key].quickEntries = [];
+    }
     return data.months[key];
+}
+
+// If a permanent salary is set up in Settings and not already present
+// (matched by name) in the given incomes list, adds a fresh copy of it.
+// Used both when a brand new month is first touched (above) and when
+// "+ New Month" builds its carried-forward income list, so the salary is
+// never missing from a new month regardless of how that month came to be.
+function seedPermanentIncome(incomesList) {
+    const salary = data.settings.permanentIncome;
+    if (!salary || !salary.enabled) return incomesList;
+    const already = incomesList.some(i => i.name.trim().toLowerCase() === salary.name.trim().toLowerCase());
+    if (already) return incomesList;
+    incomesList.push({
+        id: newId(),
+        icon: salary.icon || "💼",
+        name: salary.name || "Salary",
+        amount: salary.amount || 0,
+        receivedDate: salary.receivedDate || 1,
+        updatedAt: Date.now()
+    });
+    return incomesList;
 }
 
 /* ---------- month key / date helpers ---------- */
@@ -333,7 +371,33 @@ function getCategoryTotals(key) {
         const id = totals.hasOwnProperty(c.category) ? c.category : "others";
         totals[id] += c.amount;
     });
+    month.quickEntries.filter(q => q.type === "expense").forEach(q => {
+        const id = totals.hasOwnProperty(q.category) ? q.category : "others";
+        totals[id] += q.amount;
+    });
     return totals;
+}
+
+// Income broken down by source name — recurring income sources and any
+// quick-logged income for the month, combined when they share a name.
+const INCOME_PALETTE = ["#30d158", "#4c6fff", "#ffd60a", "#ff9f43", "#a78bfa", "#ff6b6b", "#2ecc71", "#64d2ff"];
+
+function getIncomeBreakdown(key) {
+    const month = ensureMonth(key);
+    const byName = new Map();
+
+    function add(name, icon, amount) {
+        const existing = byName.get(name);
+        if (existing) existing.total += amount;
+        else byName.set(name, { name, icon, total: amount });
+    }
+
+    month.incomes.forEach(i => add(i.name, i.icon || "💼", i.amount));
+    month.quickEntries.filter(q => q.type === "income").forEach(q => add(q.name, q.icon || "💵", q.amount));
+
+    return Array.from(byName.values())
+        .sort((a, b) => b.total - a.total)
+        .map((entry, idx) => ({ ...entry, color: INCOME_PALETTE[idx % INCOME_PALETTE.length] }));
 }
 
 /* ---------- commitment payment status ---------- */
@@ -380,10 +444,17 @@ function formatCompact(amount) {
 }
 
 function getMonthTotals(key) {
-    const month = data.months[key] || { incomes: [], commitments: [] };
-    const totalIncome = month.incomes.reduce((sum, i) => sum + i.amount, 0);
-    const totalCommitment = month.commitments.reduce((sum, c) => sum + c.amount, 0);
-    const totalPaid = month.commitments.reduce((sum, c) => sum + (c.paidAmount || 0), 0);
+    const month = data.months[key] || { incomes: [], commitments: [], quickEntries: [] };
+    const quickEntries = month.quickEntries || [];
+    const quickIncome = quickEntries.filter(q => q.type === "income").reduce((sum, q) => sum + q.amount, 0);
+    const quickExpense = quickEntries.filter(q => q.type === "expense").reduce((sum, q) => sum + q.amount, 0);
+
+    const totalIncome = month.incomes.reduce((sum, i) => sum + i.amount, 0) + quickIncome;
+    // Quick expenses are logged at the moment they happen (like "what I paid
+    // today"), so unlike a Commitment they have no separate "unpaid" state —
+    // they count as both committed AND already paid immediately.
+    const totalCommitment = month.commitments.reduce((sum, c) => sum + c.amount, 0) + quickExpense;
+    const totalPaid = month.commitments.reduce((sum, c) => sum + (c.paidAmount || 0), 0) + quickExpense;
     const saving = totalIncome - totalCommitment;
     return {
         totalIncome,
@@ -860,7 +931,7 @@ function switchWalletTab(tab) {
     ["accounts", "goals", "items"].forEach(t => {
         document.getElementById("wallet-" + t).hidden = t !== tab;
     });
-    document.querySelectorAll(".segmented-btn").forEach(btn => {
+    document.querySelectorAll("#walletTabs .segmented-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.walletTab === tab);
     });
 }
@@ -880,26 +951,32 @@ function renderWallet() {
 
 function getDayTotals(key, day) {
     const month = ensureMonth(key);
+    const quickIncome = month.quickEntries.filter(q => q.type === "income" && Number(q.date.slice(8, 10)) === day)
+        .reduce((sum, q) => sum + q.amount, 0);
+    const quickExpense = month.quickEntries.filter(q => q.type === "expense" && Number(q.date.slice(8, 10)) === day)
+        .reduce((sum, q) => sum + q.amount, 0);
     const income = month.incomes
         .filter(i => (i.receivedDate || 1) === day)
-        .reduce((sum, i) => sum + i.amount, 0);
+        .reduce((sum, i) => sum + i.amount, 0) + quickIncome;
     const expense = month.paymentLog
         .filter(p => Number(p.date.slice(8, 10)) === day)
-        .reduce((sum, p) => sum + p.amount, 0);
+        .reduce((sum, p) => sum + p.amount, 0) + quickExpense;
     return { income, expense };
 }
 
 // Everything tied to one specific day, for the tap-a-day detail popup: which
-// income landed, which payments were actually made, and which commitments
-// are due (whether paid yet or not) — three different questions the daily
-// +/- total on its own can't answer.
+// income landed, which payments were actually made, which commitments are
+// due (whether paid yet or not), and any quick-logged income/expense for
+// that exact day — the daily +/- total on its own can't show any of this.
 function getDayDetail(key, day) {
     const month = ensureMonth(key);
     const dateStr = `${key}-${pad2(day)}`;
     const incomes = month.incomes.filter(i => (i.receivedDate || 1) === day);
     const payments = month.paymentLog.filter(p => Number(p.date.slice(8, 10)) === day);
     const due = month.commitments.filter(c => c.dueDate === dateStr);
-    return { incomes, payments, due };
+    const quickIncomes = month.quickEntries.filter(q => q.type === "income" && q.date === dateStr);
+    const quickExpenses = month.quickEntries.filter(q => q.type === "expense" && q.date === dateStr);
+    return { incomes, payments, due, quickIncomes, quickExpenses };
 }
 
 function hasDueUnpaidOn(key, day) {
@@ -947,24 +1024,50 @@ function renderCalendar() {
 }
 
 /* ---------- Calendar day detail modal ---------- */
+/* "What I pay/earn today": quick, one-off dated income or expense entries,
+   separate from the formal monthly Income Sources / Commitments lists —
+   for things like a one-time cash purchase or a bit of unplanned income
+   that don't belong as a recurring monthly line item. */
+
+let openDayDetailDate = null; // "YYYY-MM-DD" of the day the modal is currently showing
 
 function openDayDetailModal(day) {
-    const { incomes, payments, due } = getDayDetail(activeMonthKey, day);
-    const dateStr = `${activeMonthKey}-${pad2(day)}`;
+    openDayDetailDate = `${activeMonthKey}-${pad2(day)}`;
+    document.getElementById("dayDetailTitle").textContent = formatDate(openDayDetailDate);
+    renderDayDetailModal();
+    document.getElementById("dayDetailModal").hidden = false;
+}
 
-    document.getElementById("dayDetailTitle").textContent = formatDate(dateStr);
+function renderDayDetailModal() {
+    if (!openDayDetailDate) return;
+    const day = Number(openDayDetailDate.slice(8, 10));
+    const { incomes, payments, due, quickIncomes, quickExpenses } = getDayDetail(activeMonthKey, day);
 
     const rows = [];
     incomes.forEach(i => rows.push(`
         <div class="item">
-            <span>${i.icon || "💼"} ${escapeHtml(i.name)}</span>
+            <span>${i.icon || "💼"} ${escapeHtml(i.name)} <span class="tag">Income source</span></span>
             <strong class="positive">+${formatMoney(i.amount)}</strong>
+        </div>
+    `));
+    quickIncomes.forEach(q => rows.push(`
+        <div class="item">
+            <span>${q.icon || "💵"} ${escapeHtml(q.name)}</span>
+            <strong class="positive">+${formatMoney(q.amount)}</strong>
+            <button class="delete-btn" data-quick-id="${q.id}" aria-label="Delete">✕</button>
         </div>
     `));
     payments.forEach(p => rows.push(`
         <div class="item">
             <span>💵 Paid: ${escapeHtml(p.name)}</span>
             <strong class="negative">-${formatMoney(p.amount)}</strong>
+        </div>
+    `));
+    quickExpenses.forEach(q => rows.push(`
+        <div class="item">
+            <span>${q.icon || "📦"} ${escapeHtml(q.name)} <span class="tag">${getCategoryInfo(q.category).icon} ${getCategoryInfo(q.category).label}</span></span>
+            <strong class="negative">-${formatMoney(q.amount)}</strong>
+            <button class="delete-btn" data-quick-id="${q.id}" aria-label="Delete">✕</button>
         </div>
     `));
     due.forEach(c => {
@@ -977,9 +1080,76 @@ function openDayDetailModal(day) {
         `);
     });
 
-    document.getElementById("dayDetailList").innerHTML = rows.join("");
+    const list = document.getElementById("dayDetailList");
+    list.innerHTML = rows.join("");
+    list.querySelectorAll(".delete-btn[data-quick-id]").forEach(btn => {
+        btn.addEventListener("click", e => {
+            e.stopPropagation();
+            deleteQuickEntry(btn.dataset.quickId);
+        });
+    });
     document.getElementById("dayDetailEmpty").hidden = rows.length > 0;
-    document.getElementById("dayDetailModal").hidden = false;
+}
+
+function closeDayDetailModal() {
+    document.getElementById("dayDetailModal").hidden = true;
+    openDayDetailDate = null;
+}
+
+/* ---------- Quick entry (dated income/expense) modal ---------- */
+
+let editingQuickEntry = { type: "expense", date: null };
+
+function openQuickEntryModal(type) {
+    editingQuickEntry = { type, date: openDayDetailDate };
+    document.getElementById("quickEntryModalTitle").textContent =
+        type === "income" ? `Add Income — ${formatDate(openDayDetailDate)}` : `Add Expense — ${formatDate(openDayDetailDate)}`;
+    document.getElementById("quickEntryIcon").value = "";
+    document.getElementById("quickEntryIcon").placeholder = type === "income" ? "💵" : "📦";
+    document.getElementById("quickEntryName").value = "";
+    document.getElementById("quickEntryAmount").value = "";
+    document.getElementById("quickEntryCategoryRow").hidden = type !== "expense";
+    document.getElementById("quickEntryCategory").value = "others";
+    document.getElementById("quickEntryModal").hidden = false;
+    document.getElementById("quickEntryName").focus();
+}
+
+function closeQuickEntryModal() {
+    document.getElementById("quickEntryModal").hidden = true;
+}
+
+function saveQuickEntryFromModal() {
+    const name = document.getElementById("quickEntryName").value.trim();
+    const icon = document.getElementById("quickEntryIcon").value.trim();
+    const amount = parseFloat(document.getElementById("quickEntryAmount").value);
+    if (!name) { alert("Please enter a name."); return; }
+    if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+    const { type, date } = editingQuickEntry;
+    const month = ensureMonth(date.slice(0, 7));
+    const fields = {
+        id: "q_" + newId(),
+        type, name, icon: icon || (type === "income" ? "💵" : "📦"),
+        amount, date, updatedAt: Date.now()
+    };
+    if (type === "expense") fields.category = document.getElementById("quickEntryCategory").value;
+
+    month.quickEntries.push(fields);
+    saveData();
+    closeQuickEntryModal();
+    renderDayDetailModal();
+    renderHome();
+    if (!document.getElementById("view-breakdown").hidden) renderBreakdown();
+}
+
+function deleteQuickEntry(id) {
+    if (!confirm("Delete this entry?")) return;
+    const month = ensureMonth(openDayDetailDate.slice(0, 7));
+    month.quickEntries = month.quickEntries.filter(q => q.id !== id);
+    saveData();
+    renderDayDetailModal();
+    renderHome();
+    if (!document.getElementById("view-breakdown").hidden) renderBreakdown();
 }
 
 function closeDayDetailModal() {
@@ -988,11 +1158,33 @@ function closeDayDetailModal() {
 
 /* ================= BREAKDOWN (Expense pie chart view) ================= */
 
+let activeBreakdownTab = "expense";
+
+function switchBreakdownTab(tab) {
+    activeBreakdownTab = tab;
+    document.querySelectorAll("#breakdownTabs .segmented-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.breakdownTab === tab);
+    });
+    renderBreakdown();
+}
+
 function renderBreakdown() {
     document.getElementById("breakdownMonthLabel").textContent = monthLabel(activeMonthKey);
+    document.getElementById("breakdownHeading").textContent =
+        activeBreakdownTab === "income" ? "Income Breakdown" : "Expense Breakdown";
+    document.getElementById("breakdownEmptyState").textContent =
+        activeBreakdownTab === "income" ? "No income recorded this month yet." : "No expenses recorded this month yet.";
 
-    const totals = getCategoryTotals(activeMonthKey);
-    const entries = CATEGORIES.map(cat => ({ ...cat, total: totals[cat.id] })).filter(c => c.total > 0);
+    let entries;
+    if (activeBreakdownTab === "income") {
+        entries = getIncomeBreakdown(activeMonthKey)
+            .map(e => ({ ...e, label: e.name }))
+            .filter(e => e.total > 0);
+    } else {
+        const totals = getCategoryTotals(activeMonthKey);
+        entries = CATEGORIES.map(cat => ({ ...cat, total: totals[cat.id] })).filter(c => c.total > 0);
+    }
+
     const grandTotal = entries.reduce((sum, e) => sum + e.total, 0);
 
     document.getElementById("breakdownTotalValue").textContent = formatMoney(grandTotal);
@@ -1290,19 +1482,70 @@ function renderMonthly() {
                 <span>${formatMoney(totalIncome)} income · ${formatMoney(totalCommitment)} committed</span>
             </div>
             <strong class="${saving < 0 ? "negative" : ""}">${formatMoney(saving)}</strong>
+            <button type="button" class="delete-btn month-delete-btn" data-month-key="${key}" title="Delete this month">✕</button>
         `;
-        row.addEventListener("click", () => {
+        row.addEventListener("click", (e) => {
+            if (e.target.closest(".month-delete-btn")) return;
             activeMonthKey = key;
             renderHome();
             switchView("home");
+        });
+        row.querySelector(".month-delete-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteMonth(key);
         });
         list.appendChild(row);
     });
 }
 
+function deleteMonth(key) {
+    const confirmed = confirm(
+        `Delete the record for ${monthLabel(key)}? This will permanently remove all income, commitments, accounts transactions logged in this month, and quick entries for this month. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    delete data.months[key];
+    saveData();
+
+    if (activeMonthKey === key) {
+        const remaining = Object.keys(data.months).sort();
+        activeMonthKey = remaining.length > 0 ? remaining[remaining.length - 1] : monthKeyFromDate(new Date());
+        ensureMonth(activeMonthKey);
+        saveData();
+    }
+
+    renderMonthly();
+    renderHome();
+    if (!document.getElementById("view-breakdown").hidden) renderBreakdown();
+}
+
 function renderSettings() {
     document.getElementById("currencyInput").value = data.settings.currency || "RM";
     renderProfileSettingsList();
+    renderSalarySettings();
+}
+
+function renderSalarySettings() {
+    const salary = data.settings.permanentIncome || { enabled: false, name: "Salary", icon: "💼", amount: 0, receivedDate: 1 };
+    document.getElementById("salaryEnabledInput").checked = !!salary.enabled;
+    document.getElementById("salaryIconInput").value = salary.icon || "💼";
+    document.getElementById("salaryNameInput").value = salary.name || "Salary";
+    document.getElementById("salaryAmountInput").value = salary.amount || "";
+    document.getElementById("salaryDateInput").value = salary.receivedDate || 1;
+    document.getElementById("salaryFields").hidden = !salary.enabled;
+}
+
+function saveSalarySettingsFromForm() {
+    const enabled = document.getElementById("salaryEnabledInput").checked;
+    const icon = document.getElementById("salaryIconInput").value.trim() || "💼";
+    const name = document.getElementById("salaryNameInput").value.trim() || "Salary";
+    const amount = parseFloat(document.getElementById("salaryAmountInput").value) || 0;
+    const receivedDate = Math.min(28, Math.max(1, parseInt(document.getElementById("salaryDateInput").value, 10) || 1));
+
+    data.settings.permanentIncome = { enabled, icon, name, amount, receivedDate };
+    saveData();
+    renderSalarySettings();
+    alert("Salary settings saved. It will be auto-added to new months going forward.");
 }
 
 function switchView(view) {
@@ -1473,6 +1716,7 @@ function createNewMonth() {
     if (!data.months[nextKey]) {
         const prev = data.months[latestKey];
         const newIncomes = prev ? prev.incomes.map(i => ({ ...i, id: newId(), updatedAt: Date.now() })) : [];
+        seedPermanentIncome(newIncomes);
         const newCommitments = [];
 
         if (prev) {
@@ -1517,7 +1761,7 @@ function createNewMonth() {
             });
         }
 
-        data.months[nextKey] = { incomes: newIncomes, commitments: newCommitments, savingsTransactions: [], paymentLog: [] };
+        data.months[nextKey] = { incomes: newIncomes, commitments: newCommitments, savingsTransactions: [], paymentLog: [], quickEntries: [] };
         saveData();
     }
 
@@ -1795,14 +2039,23 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("savePaymentBtn").addEventListener("click", savePaymentFromModal);
 
     document.getElementById("closeDayDetailBtn").addEventListener("click", closeDayDetailModal);
+    document.getElementById("addDayIncomeBtn").addEventListener("click", () => openQuickEntryModal("income"));
+    document.getElementById("addDayExpenseBtn").addEventListener("click", () => openQuickEntryModal("expense"));
+    document.getElementById("cancelQuickEntryBtn").addEventListener("click", closeQuickEntryModal);
+    document.getElementById("saveQuickEntryBtn").addEventListener("click", saveQuickEntryFromModal);
 
     document.getElementById("viewRecurringLinkBtn").addEventListener("click", () => switchView("recurring"));
     document.getElementById("viewRecurringFromBreakdownBtn").addEventListener("click", () => switchView("recurring"));
     document.getElementById("backFromRecurringBtn").addEventListener("click", () => switchView("home"));
 
     // Wallet sub-tabs
-    document.querySelectorAll(".segmented-btn").forEach(btn => {
+    document.querySelectorAll("#walletTabs .segmented-btn").forEach(btn => {
         btn.addEventListener("click", () => switchWalletTab(btn.dataset.walletTab));
+    });
+
+    // Breakdown Expenses/Income tabs
+    document.querySelectorAll("#breakdownTabs .segmented-btn").forEach(btn => {
+        btn.addEventListener("click", () => switchBreakdownTab(btn.dataset.breakdownTab));
     });
 
     // Accounts
@@ -1854,6 +2107,11 @@ document.addEventListener("DOMContentLoaded", () => {
         renderHome();
         renderMonthly();
     });
+
+    document.getElementById("salaryEnabledInput").addEventListener("change", e => {
+        document.getElementById("salaryFields").hidden = !e.target.checked;
+    });
+    document.getElementById("saveSalaryBtn").addEventListener("click", saveSalarySettingsFromForm);
 
     document.getElementById("exportBtn").addEventListener("click", exportData);
     document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());

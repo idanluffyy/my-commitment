@@ -391,7 +391,8 @@ header h1 {
     margin-top: -4px;
 }
 
-.settings-group input[type="text"] {
+.settings-group input[type="text"],
+.settings-group input[type="number"] {
     padding: 10px;
     border: 1px solid var(--border);
     background: var(--card-alt);
@@ -520,6 +521,17 @@ nav button.active {
 
 .checkbox-label input {
     width: auto;
+}
+
+#salaryFields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#salaryFields label {
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 .modal-actions {
